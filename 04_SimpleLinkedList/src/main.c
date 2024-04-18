@@ -1,20 +1,43 @@
 #include "Structs.h"
 
-Node *insertAtBeggining(Node *list, BankAccount bankAccount)
+void deallocate_list(Node *list)
+{
+    Node *temp = list;
+    while (list)
+    {
+        temp = list;
+        list = list->next;
+        free(temp->data.owner_name);
+        free(temp->data.currency);
+        free(temp);
+    }
+
+    list = NULL;
+
+    printf("\nThe list after deallocation:\n");
+
+    while (list)
+    {
+        printf("%s %s\n", list->data.owner_name, list->data.iban);
+
+        list = list->next;
+    }
+}
+
+Node *insert_node_beggining(Node *list, BankAccount bankAccount)
 {
     Node *newNode = (Node *)malloc(sizeof(Node));
 
     newNode->data = bankAccount;
     newNode->next = list;
-    list = newNode;
 
-    return list;
+    return newNode;
 }
 
-Node *insertAtEnd(Node *list, BankAccount bankAccount)
+Node *insert_node_end(Node *list, BankAccount bankAccount)
 {
+    Node *tempList = list;
     Node *newNode = (Node *)malloc(sizeof(Node));
-    Node *current = list;
 
     newNode->data = bankAccount;
     newNode->next = NULL;
@@ -25,86 +48,115 @@ Node *insertAtEnd(Node *list, BankAccount bankAccount)
     }
     else
     {
-        while (current->next)
+        while (tempList->next)
         {
-            current = current->next;
+            tempList = tempList->next;
         }
-        current->next = newNode;
+
+        tempList->next = newNode;
+    }
+    return list;
+}
+
+DoubleList simple_to_double(Node *list)
+{
+    DoubleList doubleList;
+    doubleList.head = NULL;
+    doubleList.tail = NULL;
+
+    Node *tempList = list;
+
+    while (tempList)
+    {
+        NodeD *newNode = (NodeD *)malloc(sizeof(NodeD));
+        newNode->pData = &tempList->data;
+        newNode->next = NULL;
+
+        if (doubleList.head == NULL)
+        {
+            doubleList.head = newNode;
+            doubleList.tail = newNode;
+            newNode->prev = NULL;
+        }
+        else
+        {
+            doubleList.tail->next = newNode;
+            newNode->prev = doubleList.tail;
+            doubleList.tail = newNode;
+        }
+
+        tempList = tempList->next;
+    }
+
+    return doubleList;
+}
+
+void print_list(Node *list)
+{
+    printf("\nThe list after creation:\n");
+
+    Node *tempList = list;
+
+    while (tempList)
+    {
+        printf("%s %s\n", tempList->data.owner_name, tempList->data.iban);
+
+        tempList = tempList->next;
+    }
+}
+
+// function to swap a node which contains a given IBAN with the first node in a simple linked list
+Node *swap_first_node(Node *list, char *iban)
+{
+    Node *tempList = list;
+
+    while (tempList)
+    {
+        if (strcmp(tempList->data.iban, iban) == 0)
+        {
+            BankAccount tempBankAccount = tempList->data;
+            tempList->data = list->data;
+            list->data = tempBankAccount;
+
+            return list;
+        }
+
+        tempList = tempList->next;
     }
 
     return list;
 }
 
-// swap nodes without swapping data
-void swap_general(Node *list, char *iban1, char *iban2)
+// function to swap 2 nodes with given ibans in a simple linked list
+Node *swap_nodes(Node *list, char *iban1, char *iban2)
 {
-    Node *current = list;
-    Node *prev1 = NULL, *prev2 = NULL;
-    Node *node1 = NULL, *node2 = NULL;
+    Node *tempList = list;
+    Node *node1 = NULL;
+    Node *node2 = NULL;
 
-    while (current)
+    while (tempList)
     {
-        if (strcmp(current->data.iban, iban1) == 0)
+        if (strcmp(tempList->data.iban, iban1) == 0)
         {
-            node1 = current;
-            break;
+            node1 = tempList;
         }
-        prev1 = current;
-        current = current->next;
-    }
 
-    current = list;
-    while (current)
-    {
-        if (strcmp(current->data.iban, iban2) == 0)
+        if (strcmp(tempList->data.iban, iban2) == 0)
         {
-            node2 = current;
-            break;
+            node2 = tempList;
         }
-        prev2 = current;
-        current = current->next;
+
+        tempList = tempList->next;
     }
 
-    if (node1 == NULL || node2 == NULL)
+    if (node1 && node2)
     {
-        printf("One or both of the IBANs are not found in the list\n");
-        return;
+        BankAccount tempBankAccount = node1->data;
+        node1->data = node2->data;
+        node2->data = tempBankAccount;
     }
 
-    if (prev1 != NULL)
-    {
-        prev1->next = node2;
-    }
-    else
-    {
-        list = node2;
-    }
-
-    if (prev2 != NULL)
-    {
-        prev2->next = node1;
-    }
-    else
-    {
-        list = node1;
-    }
-
-    Node *temp = node1->next;
-    node1->next = node2->next;
-    node2->next = temp;
-}
-
-// Function to print the list
-void printList(Node *list)
-{
-    Node *current = list;
-
-    printf("The elements of the list:\n");
-    while (current)
-    {
-        printf("%s %s\n", current->data.iban, current->data.owner_name);
-        current = current->next;
-    }
+    return list;
 }
 
 int main()
@@ -114,32 +166,63 @@ int main()
 
     Node *head = NULL;
 
-    while (fgets(buffer, sizeof(buffer), file)) // buffer must contain iban
+    while (fgets(buffer, sizeof(buffer), file))
     {
         BankAccount tBankAccount;
         strncpy(tBankAccount.iban, buffer, strlen(buffer) - 1);
         tBankAccount.iban[strlen(buffer) - 1] = 0;
 
-        fgets(buffer, sizeof(buffer), file); // buffer must contain owner's name
+        fgets(buffer, sizeof(buffer), file);
         tBankAccount.owner_name = (char *)malloc(strlen(buffer));
         strncpy(tBankAccount.owner_name, buffer, strlen(buffer) - 1);
         tBankAccount.owner_name[strlen(buffer) - 1] = 0;
 
-        fgets(buffer, sizeof(buffer), file); // buffer must contain balance data (as string)
+        fgets(buffer, sizeof(buffer), file);
         tBankAccount.balance = atof(buffer);
 
-        fgets(buffer, sizeof(buffer), file); // buffer must contain currency
+        fgets(buffer, sizeof(buffer), file);
         tBankAccount.currency = (char *)malloc(strlen(buffer));
         strncpy(tBankAccount.currency, buffer, strlen(buffer) - 1);
         tBankAccount.currency[strlen(buffer) - 1] = 0;
 
-        // insert tBankAccount data into the simple list handled by head
-        // new node addded to the begining of the simple list
-        head = insertAtEnd(head, tBankAccount);
+        head = insert_node_end(head, tBankAccount);
     }
 
-    printList(head);
-    // swap_general(head, "RO04RNCB1234567890999000", "RO04BRDE1234000000999000");
-    printf("\n");
-    printList(head);
+    print_list(head);
+
+    DoubleList doubleList = simple_to_double(head);
+
+    NodeD *tempList = doubleList.head;
+
+    printf("\nThe double list after creation (start - to - end):\n");
+
+    while (tempList)
+    {
+        printf("%s %s\n", tempList->pData->owner_name, tempList->pData->iban);
+
+        tempList = tempList->next;
+    }
+
+    // print the double list from end to start
+    tempList = doubleList.tail;
+
+    printf("\nThe double list after creation (end - to - start):\n");
+
+    while (tempList)
+    {
+        printf("%s %s\n", tempList->pData->owner_name, tempList->pData->iban);
+
+        tempList = tempList->prev;
+    }
+
+    head = swap_first_node(head, "RO98BTRL1234567899900321");
+    print_list(head);
+
+    head = swap_nodes(head, "RO04BRDE0000000000999000", "RO04BRDE1234000000999000");
+    print_list(head);
+
+    deallocate_list(head);
+
+    fclose(file);
+    return 0;
 }
