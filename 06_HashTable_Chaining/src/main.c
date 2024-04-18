@@ -56,6 +56,82 @@ Node *search_first_ba(Node **HT, unsigned char ht_size, char *name)
     return temp; //! NULL
 }
 
+// function to search for all bank account which meets the key; the founded bank accounts will be stored
+// into a separate simple list; the separate simple list does not share heap memory locations
+// with the simple lists built in hash table with chaining
+// the function returns the head of the separate simple list
+Node *search_all_ba(Node **HT, unsigned char ht_size, char *name)
+{
+    Node *head = NULL;
+
+    for (unsigned char i = 0; i < ht_size; i++)
+    {
+        Node *temp = HT[i];
+
+        while (temp)
+        {
+            if (strcmp(temp->data.owner_name, name) == 0)
+            {
+                head = insert_beggining(head, temp->data);
+            }
+
+            temp = temp->next;
+        }
+    }
+
+    return head;
+}
+
+// function to deallocate the memory of the hash table
+void free_hash_table(Node **HT, unsigned char ht_size)
+{
+    for (unsigned char i = 0; i < ht_size; i++)
+    {
+        Node *temp = HT[i];
+
+        while (temp)
+        {
+            Node *temp2 = temp;
+            temp = temp->next;
+            free(temp2->data.owner_name);
+            free(temp2->data.currency);
+            free(temp2);
+        }
+    }
+
+    free(HT);
+}
+
+// function to deallocate the memory of a simple list
+void free_list(Node *list)
+{
+    while (list)
+    {
+        Node *temp = list;
+        list = list->next;
+        free(temp->data.owner_name);
+        free(temp->data.currency);
+        free(temp);
+    }
+
+    free(list);
+}
+
+void print_hash_table(Node **HT, unsigned char ht_size)
+{
+    printf("\nHash Table:\n");
+    for (unsigned char i = 0; i < ht_size; i++)
+    {
+        Node *temp = HT[i];
+
+        while (temp)
+        {
+            printf("%s %s\n", temp->data.owner_name, temp->data.iban);
+            temp = temp->next;
+        }
+    }
+}
+
 int main(int argc, char const *argv[])
 {
     FILE *file = fopen("Accounts.txt", "r");
@@ -97,6 +173,20 @@ int main(int argc, char const *argv[])
     {
         printf("\n\nBank Account has been found: %s %s\n", temp->data.owner_name, temp->data.iban);
     }
+
+    Node *temp2 = search_all_ba(HTable, HASH_TABLE_SIZE, "Popescu Mircea");
+
+    printf("\nBank Accounts with the same key:\n");
+    while (temp2)
+    {
+        printf("%s %s\n", temp2->data.owner_name, temp2->data.iban);
+        temp2 = temp2->next;
+    }
+
+    print_hash_table(HTable, HASH_TABLE_SIZE);
+
+    free_hash_table(HTable, HASH_TABLE_SIZE);
+    free_list(temp2);
 
     fclose(file);
     return 0;
